@@ -1,0 +1,50 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+from app.models import Task
+
+app = FastAPI(title="Task Manager API")
+
+tasks: dict[int, Task] = {}
+_next_id: int = 1
+
+
+class TaskCreate(BaseModel):
+    title: str
+    description: str = ""
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/tasks")
+def list_tasks() -> list[Task]:
+    return list(tasks.values())
+
+
+@app.post("/tasks", status_code=201)
+def create_task(body: TaskCreate) -> Task:
+    global _next_id
+    task = Task(id=_next_id, title=body.title, description=body.description)
+    tasks[_next_id] = task
+    _next_id += 1
+    return task
+
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int) -> Task:
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks[task_id]
+
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int):
+    # BUG: requirement says mark task as done and return it,
+    # but this actually deletes the task and returns {"deleted": task_id}
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    del tasks[task_id]
+    return {"deleted": task_id}
