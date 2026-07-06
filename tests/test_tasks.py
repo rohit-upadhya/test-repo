@@ -47,6 +47,25 @@ def test_list_tasks(client):
     assert titles == {"Task 1", "Task 2"}
 
 
+def test_list_tasks_done_filter_wrong_behavior(client):
+    # Documents buggy behavior: ?done filter is ignored, always returns all tasks
+    client.post("/tasks", json={"title": "Active"})
+    client.post("/tasks", json={"title": "Done"})
+    # Both tasks returned regardless of ?done= filter (bug: filter not applied)
+    response = client.get("/tasks?done=true")
+    assert response.status_code == 200
+    assert len(response.json()) == 2  # BUG: should be 0 (no done tasks yet)
+
+
+def test_list_tasks_pagination_wrong_behavior(client):
+    # Documents buggy behavior: limit/offset ignored
+    for i in range(5):
+        client.post("/tasks", json={"title": f"Task {i}"})
+    response = client.get("/tasks?limit=2&offset=0")
+    assert response.status_code == 200
+    assert len(response.json()) == 5  # BUG: should be 2
+
+
 def test_get_task(client):
     client.post("/tasks", json={"title": "Find me"})
     response = client.get("/tasks/1")

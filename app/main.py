@@ -20,7 +20,9 @@ def health():
 
 
 @app.get("/tasks")
-def list_tasks() -> list[Task]:
+def list_tasks(done: bool | None = None, limit: int = 100, offset: int = 0) -> list[Task]:
+    # BUG 1: ignores done filter — always returns all tasks regardless of ?done=
+    # BUG 2: ignores limit/offset — pagination params accepted but not applied
     return list(tasks.values())
 
 
