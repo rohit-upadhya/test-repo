@@ -1,5 +1,5 @@
 {
-  "bootstrap": "python3 -m venv .venv && .venv/bin/pip install fastapi uvicorn httpx pytest",
+  "bootstrap": "python3 -m venv .venv && .venv/bin/pip install fastapi uvicorn httpx anthropic pytest",
   "gate_commands": [
     {"name": "pytest", "command": ".venv/bin/pytest -x -q"}
   ],
