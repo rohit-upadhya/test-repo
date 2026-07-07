@@ -41,11 +41,10 @@ def test_list_all_notes():
     assert len(client.get("/notes").json()) == 2
 
 
-def test_tag_filter_bug():
-    # BUG: filter ignored — both notes returned
+def test_tag_filter():
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
-    assert len(client.get("/notes?tag=work").json()) == 2  # BUG: should be 1
+    assert len(client.get("/notes?tag=work").json()) == 1
 
 
 def test_mark_done_returns_200():
@@ -55,7 +54,22 @@ def test_mark_done_returns_200():
     assert r.status_code == 200
 
 
-def test_done_filter_bug():
-    # BUG: done filter ignored
+def test_done_filter():
     client.post("/notes", json={"text": "task", "tag": "work"})
-    assert len(client.get("/notes?done=true").json()) == 1  # BUG: no done notes yet
+    client.patch("/notes/1/done")
+    assert len(client.get("/notes?done=true").json()) == 1
+
+
+def test_mark_done_response_has_done_true():
+    client.post("/notes", json={"text": "task"})
+    r = client.patch("/notes/1/done")
+    assert r.status_code == 200
+    assert r.json()["done"] is True
+
+
+def test_mark_done_persists():
+    client.post("/notes", json={"text": "task"})
+    client.patch("/notes/1/done")
+    r = client.get("/notes/1")
+    assert r.status_code == 200
+    assert r.json()["done"] is True
