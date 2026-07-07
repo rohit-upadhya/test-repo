@@ -16,22 +16,32 @@ def health():
 
 
 @app.get("/notes", response_model=list[Note])
-def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
+def list_notes(tag: str | None = None, done: bool | None = None, sort: str | None = None) -> list[Note]:
     notes = [Note(**n) for n in _notes.values() if not n.get("archived", False)]
     if tag is not None:
         notes = [n for n in notes if n.tag == tag]
     if done is not None:
         notes = [n for n in notes if n.done == done]
+    if sort == "priority":
+        notes.sort(key=lambda n: n.priority, reverse=True)
     return notes
 
 
 @app.post("/notes", status_code=201, response_model=Note)
 def create_note(body: NoteIn) -> Note:
     global _next_id
-    note = {"id": _next_id, "text": body.text, "tag": body.tag, "done": False, "archived": False}
+    note = {"id": _next_id, "text": body.text, "tag": body.tag, "done": False, "archived": False, "priority": body.priority}
     _notes[_next_id] = note
     _next_id += 1
     return Note(**note)
+
+
+@app.get("/notes/search", response_model=list[Note])
+def search_notes(q: str | None = None) -> list[Note]:
+    notes = [Note(**n) for n in _notes.values() if not n.get("archived", False)]
+    if q is not None:
+        notes = [n for n in notes if q.lower() in n.text.lower()]
+    return notes
 
 
 @app.get("/notes/{note_id}", response_model=Note)

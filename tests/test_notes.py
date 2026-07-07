@@ -71,3 +71,61 @@ def test_archived_note_not_in_list():
     client.post("/notes", json={"text": "bye"})
     client.delete("/notes/1")
     assert len(client.get("/notes").json()) == 0
+
+
+def test_create_note_with_priority():
+    r = client.post("/notes", json={"text": "important", "priority": 3})
+    assert r.status_code == 201
+    assert r.json()["priority"] == 3
+
+
+def test_create_note_default_priority():
+    r = client.post("/notes", json={"text": "normal"})
+    assert r.status_code == 201
+    assert r.json()["priority"] == 2
+
+
+def test_sort_by_priority():
+    client.post("/notes", json={"text": "low", "priority": 1})
+    client.post("/notes", json={"text": "high", "priority": 3})
+    r = client.get("/notes?sort=priority")
+    assert r.status_code == 200
+    notes = r.json()
+    assert len(notes) == 2
+    assert notes[0]["priority"] == 3
+    assert notes[1]["priority"] == 1
+
+
+def test_search_returns_matching_notes():
+    client.post("/notes", json={"text": "hello world"})
+    client.post("/notes", json={"text": "goodbye"})
+    r = client.get("/notes/search?q=hello")
+    assert r.status_code == 200
+    results = r.json()
+    assert len(results) == 1
+    assert "hello" in results[0]["text"].lower()
+
+
+def test_search_case_insensitive():
+    client.post("/notes", json={"text": "Hello"})
+    r = client.get("/notes/search?q=hello")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+def test_search_excludes_archived():
+    client.post("/notes", json={"text": "hello"})
+    # Directly set archived=True since DELETE hard-deletes (existing bug, out of scope)
+    main_module._notes[1]["archived"] = True
+    r = client.get("/notes/search?q=hello")
+    assert r.status_code == 200
+    assert len(r.json()) == 0
+
+
+def test_search_no_q_returns_all_non_archived():
+    client.post("/notes", json={"text": "first"})
+    client.post("/notes", json={"text": "second"})
+    main_module._notes[1]["archived"] = True
+    r = client.get("/notes/search")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
