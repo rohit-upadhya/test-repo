@@ -30,12 +30,17 @@ def test_history_after_classify():
     assert response.status_code == 200
 
 
-def test_history_entry_not_found_no_404_bug():
-    # Documents buggy behavior: missing entry raises StopIteration instead of 404
-    # The correct fix is: raise HTTPException(404) when entry not found
-    import pytest
-    with pytest.raises(Exception):
-        client.get("/history/999")
+def test_history_entry_not_found_returns_404():
+    response = client.get("/history/999")
+    assert response.status_code == 404
+    assert response.json()["detail"]
+
+
+def test_history_entry_found_returns_200():
+    history_module.record("summarise", "input text", "result text", "claude-sonnet-4-6")
+    response = client.get("/history/1")
+    assert response.status_code == 200
+    assert response.json()["id"] == 1
 
 
 def test_clear_history():
