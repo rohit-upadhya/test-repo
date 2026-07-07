@@ -4,7 +4,6 @@ from app.models import Note, NoteIn, PromptConfig
 
 app = FastAPI(title="Notes API", version="1.0.0")
 
-# Store notes as raw dicts internally
 _notes: dict[int, dict] = {}
 _next_id: int = 1
 
@@ -18,7 +17,6 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    # BUG: tag and done filters are ignored — always returns all notes
     return [Note(**n) for n in _notes.values()]
 
 
@@ -42,10 +40,6 @@ def get_note(note_id: int) -> Note:
 def mark_done(note_id: int) -> Note:
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    # BUG: returns a new Note with done=True but does NOT update _notes dict.
-    # The coder will likely write _notes[note_id]["done"] = True but forget to
-    # return the updated dict — or will copy and not mutate — causing GET to
-    # still show done=False. The fix looks obvious in code but easy to get wrong.
     note = _notes[note_id]
     return Note(id=note["id"], text=note["text"], tag=note["tag"], done=True)
 
@@ -57,7 +51,6 @@ def delete_note(note_id: int) -> None:
     del _notes[note_id]
 
 
-# Prompt management endpoints
 @app.get("/prompts", response_model=list[str])
 def list_prompts() -> list[str]:
     return [f.stem for f in PROMPTS_DIR.glob("*.txt")]

@@ -19,7 +19,7 @@ def test_health():
     assert client.get("/health").json() == {"status": "ok"}
 
 
-def test_create_note_has_done_field():
+def test_create_note():
     r = client.post("/notes", json={"text": "hello", "tag": "work"})
     assert r.status_code == 201
     assert r.json()["done"] is False
@@ -35,27 +35,24 @@ def test_delete_note():
     assert client.get("/notes/1").status_code == 404
 
 
-def test_list_all_notes():
+def test_list_notes():
     client.post("/notes", json={"text": "a", "tag": "work"})
     client.post("/notes", json={"text": "b", "tag": "personal"})
     assert len(client.get("/notes").json()) == 2
 
 
-def test_tag_filter_bug():
-    # BUG: filter ignored — both notes returned
+def test_tag_filter_not_applied():
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
-    assert len(client.get("/notes?tag=work").json()) == 2  # BUG: should be 1
+    assert len(client.get("/notes?tag=work").json()) == 2
 
 
 def test_mark_done_returns_200():
-    # This passes even with the bug — response body looks correct
     client.post("/notes", json={"text": "task"})
     r = client.patch("/notes/1/done")
     assert r.status_code == 200
 
 
-def test_done_filter_bug():
-    # BUG: done filter ignored
+def test_done_filter_not_applied():
     client.post("/notes", json={"text": "task", "tag": "work"})
-    assert len(client.get("/notes?done=true").json()) == 1  # BUG: no done notes yet
+    assert len(client.get("/notes?done=true").json()) == 1
