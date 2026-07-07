@@ -18,8 +18,12 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    # BUG: tag and done filters are ignored — always returns all notes
-    return [Note(**n) for n in _notes.values()]
+    notes = _notes.values()
+    if tag is not None:
+        notes = [n for n in notes if n["tag"] == tag]
+    if done is not None:
+        notes = [n for n in notes if n["done"] == done]
+    return [Note(**n) for n in notes]
 
 
 @app.post("/notes", status_code=201, response_model=Note)
@@ -42,12 +46,8 @@ def get_note(note_id: int) -> Note:
 def mark_done(note_id: int) -> Note:
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    # BUG: returns a new Note with done=True but does NOT update _notes dict.
-    # The coder will likely write _notes[note_id]["done"] = True but forget to
-    # return the updated dict — or will copy and not mutate — causing GET to
-    # still show done=False. The fix looks obvious in code but easy to get wrong.
-    note = _notes[note_id]
-    return Note(id=note["id"], text=note["text"], tag=note["tag"], done=True)
+    _notes[note_id]["done"] = True
+    return Note(**_notes[note_id])
 
 
 @app.delete("/notes/{note_id}", status_code=204)
