@@ -43,10 +43,8 @@ def get_task(task_id: int) -> Task:
 
 
 @app.delete("/tasks/{task_id}")
-def delete_task(task_id: int):
-    # BUG: requirement says mark task as done and return it,
-    # but this actually deletes the task and returns {"deleted": task_id}
+def delete_task(task_id: int) -> Task:
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-    del tasks[task_id]
-    return {"deleted": task_id}
+    tasks[task_id].done = True
+    return tasks[task_id]

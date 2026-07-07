@@ -78,15 +78,27 @@ def test_get_task_not_found(client):
     assert response.status_code == 404
 
 
-def test_delete_task_wrong_behavior(client):
-    # Tests current (buggy) behavior: DELETE removes the task and returns {"deleted": id}
-    # The correct behavior should be to mark done=True and return the task,
-    # but that is not implemented — this test documents the bug.
-    client.post("/tasks", json={"title": "To be deleted"})
+def test_delete_task_returns_200(client):
+    client.post("/tasks", json={"title": "Mark me done"})
     response = client.delete("/tasks/1")
     assert response.status_code == 200
-    assert response.json() == {"deleted": 1}
 
-    # Task is gone from the store (confirms the buggy delete actually happened)
+
+def test_delete_task_returns_task_object(client):
+    client.post("/tasks", json={"title": "Mark me done"})
+    response = client.delete("/tasks/1")
+    data = response.json()
+    assert data["id"] == 1
+
+
+def test_delete_task_sets_done_true(client):
+    client.post("/tasks", json={"title": "Mark me done"})
+    response = client.delete("/tasks/1")
+    assert response.json()["done"] is True
+
+
+def test_delete_task_task_still_exists(client):
+    client.post("/tasks", json={"title": "Mark me done"})
+    client.delete("/tasks/1")
     get_response = client.get("/tasks/1")
-    assert get_response.status_code == 404
+    assert get_response.status_code == 200
