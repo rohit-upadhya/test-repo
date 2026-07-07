@@ -4,7 +4,8 @@ from app.models import Note, NoteIn, PromptConfig
 
 app = FastAPI(title="Notes API", version="1.0.0")
 
-_notes: dict[int, Note] = {}
+# Store notes as raw dicts internally
+_notes: dict[int, dict] = {}
 _next_id: int = 1
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -17,36 +18,36 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    # BUG 1: tag filter is ignored — always returns all notes
-    # BUG 2: done filter is also ignored — Note model doesn't even have a done field
-    return list(_notes.values())
+    # BUG: tag and done filters are ignored — always returns all notes
+    return [Note(**n) for n in _notes.values()]
 
 
 @app.post("/notes", status_code=201, response_model=Note)
 def create_note(body: NoteIn) -> Note:
     global _next_id
-    note = Note(id=_next_id, text=body.text, tag=body.tag)
+    note = {"id": _next_id, "text": body.text, "tag": body.tag, "done": False}
     _notes[_next_id] = note
     _next_id += 1
-    return note
+    return Note(**note)
 
 
 @app.get("/notes/{note_id}", response_model=Note)
 def get_note(note_id: int) -> Note:
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    return _notes[note_id]
+    return Note(**_notes[note_id])
 
 
-@app.patch("/notes/{note_id}/done", status_code=200)
+@app.patch("/notes/{note_id}/done", status_code=200, response_model=Note)
 def mark_done(note_id: int) -> Note:
-    # BUG: marks done=True but returns a 200 with the note object correctly,
-    # HOWEVER does NOT persist — creates a new Note object instead of mutating
-    # the stored one, so subsequent GET still shows done=False
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
+    # BUG: returns a new Note with done=True but does NOT update _notes dict.
+    # The coder will likely write _notes[note_id]["done"] = True but forget to
+    # return the updated dict — or will copy and not mutate — causing GET to
+    # still show done=False. The fix looks obvious in code but easy to get wrong.
     note = _notes[note_id]
-    return Note(id=note.id, text=note.text, tag=note.tag, done=True)
+    return Note(id=note["id"], text=note["text"], tag=note["tag"], done=True)
 
 
 @app.delete("/notes/{note_id}", status_code=204)
