@@ -44,11 +44,25 @@ def test_list_all_notes():
     assert len(r.json()) == 2
 
 
-def test_tag_filter_bug():
-    # BUG: ?tag= filter is ignored — both notes returned even when filtering
+def test_tag_filter_match():
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
     r = client.get("/notes?tag=work")
     assert r.status_code == 200
-    # BUG: should be 1 but returns 2 because filter is not applied
+    assert len(r.json()) == 1
+    assert r.json()[0]["tag"] == "work"
+
+
+def test_tag_filter_no_param():
+    client.post("/notes", json={"text": "work note", "tag": "work"})
+    client.post("/notes", json={"text": "personal note", "tag": "personal"})
+    r = client.get("/notes")
+    assert r.status_code == 200
     assert len(r.json()) == 2
+
+
+def test_tag_filter_nonexistent():
+    client.post("/notes", json={"text": "work note", "tag": "work"})
+    r = client.get("/notes?tag=nonexistent")
+    assert r.status_code == 200
+    assert len(r.json()) == 0
