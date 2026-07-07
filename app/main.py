@@ -17,9 +17,12 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    # BUG 1: tag filter is ignored — always returns all notes
-    # BUG 2: done filter is also ignored — Note model doesn't even have a done field
-    return list(_notes.values())
+    notes = list(_notes.values())
+    if tag is not None:
+        notes = [n for n in notes if n.tag == tag]
+    if done is not None:
+        notes = [n for n in notes if n.done == done]
+    return notes
 
 
 @app.post("/notes", status_code=201, response_model=Note)
@@ -40,13 +43,11 @@ def get_note(note_id: int) -> Note:
 
 @app.patch("/notes/{note_id}/done", status_code=200)
 def mark_done(note_id: int) -> Note:
-    # BUG: marks done=True but returns a 200 with the note object correctly,
-    # HOWEVER does NOT persist — creates a new Note object instead of mutating
-    # the stored one, so subsequent GET still shows done=False
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
     note = _notes[note_id]
-    return Note(id=note.id, text=note.text, tag=note.tag, done=True)
+    _notes[note_id] = Note(id=note.id, text=note.text, tag=note.tag, done=True)
+    return _notes[note_id]
 
 
 @app.delete("/notes/{note_id}", status_code=204)

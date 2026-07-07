@@ -41,11 +41,10 @@ def test_list_all_notes():
     assert len(client.get("/notes").json()) == 2
 
 
-def test_tag_filter_bug():
-    # BUG: filter ignored — both notes returned
+def test_tag_filter():
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
-    assert len(client.get("/notes?tag=work").json()) == 2  # BUG: should be 1
+    assert len(client.get("/notes?tag=work").json()) == 1
 
 
 def test_mark_done_returns_200():
@@ -56,15 +55,44 @@ def test_mark_done_returns_200():
 
 
 def test_mark_done_not_persisted_bug():
-    # BUG: PATCH returns done=True but GET still shows done=False
     client.post("/notes", json={"text": "task"})
     client.patch("/notes/1/done")
     r = client.get("/notes/1")
-    assert r.json()["done"] is False  # BUG: should be True after patch
+    assert r.json()["done"] is True
 
 
-def test_done_filter_bug():
-    # BUG: done filter ignored
+def test_done_filter():
     client.post("/notes", json={"text": "task"})
     client.patch("/notes/1/done")
-    assert len(client.get("/notes?done=true").json()) == 1  # BUG: returns all notes
+    assert len(client.get("/notes?done=true").json()) == 1
+
+
+def test_tag_filter_returns_only_matching():
+    client.post("/notes", json={"text": "work note", "tag": "work"})
+    client.post("/notes", json={"text": "personal note", "tag": "personal"})
+    results = client.get("/notes?tag=work").json()
+    assert len(results) == 1
+    assert results[0]["tag"] == "work"
+
+
+def test_mark_done_returns_200_with_done_true():
+    client.post("/notes", json={"text": "task"})
+    r = client.patch("/notes/1/done")
+    assert r.status_code == 200
+    assert r.json()["done"] is True
+
+
+def test_mark_done_persists():
+    client.post("/notes", json={"text": "task"})
+    client.patch("/notes/1/done")
+    r = client.get("/notes/1")
+    assert r.json()["done"] is True
+
+
+def test_done_filter_returns_only_done_notes():
+    client.post("/notes", json={"text": "task1"})
+    client.post("/notes", json={"text": "task2"})
+    client.patch("/notes/1/done")
+    results = client.get("/notes?done=true").json()
+    assert len(results) == 1
+    assert results[0]["done"] is True
