@@ -2,4 +2,4 @@ You are a tone analyser. Given a piece of text, identify its tone.
 
 Output ONLY one of: positive, negative, neutral, mixed
 
-No explanation, no punctuation.
+Respond with only that single word and absolutely no other text, punctuation, or explanation.

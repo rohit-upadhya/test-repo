@@ -28,10 +28,10 @@ def get_history() -> list[HistoryEntry]:
 
 @router.get("/history/{entry_id}", response_model=HistoryEntry)
 def get_history_entry(entry_id: int) -> HistoryEntry:
-    # BUG: linear scan returns first match but does not handle
-    # the case where entry_id doesn't exist — raises StopIteration
-    # instead of a proper 404.
-    return next(e for e in _history if e.id == entry_id)
+    try:
+        return next(e for e in _history if e.id == entry_id)
+    except StopIteration:
+        raise HTTPException(status_code=404, detail="Entry not found")
 
 
 @router.delete("/history", status_code=204)
