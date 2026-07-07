@@ -10,6 +10,7 @@ class Note(BaseModel):
     id: int
     text: str
     tag: str
+    done: bool = False
 
 
 class PromptConfig(BaseModel):

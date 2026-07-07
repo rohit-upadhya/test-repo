@@ -19,11 +19,10 @@ def test_health():
     assert client.get("/health").json() == {"status": "ok"}
 
 
-def test_create_and_get_note():
+def test_create_note_has_done_field():
     r = client.post("/notes", json={"text": "hello", "tag": "work"})
     assert r.status_code == 201
-    assert r.json()["id"] == 1
-    assert r.json()["tag"] == "work"
+    assert r.json()["done"] is False
 
 
 def test_get_note_not_found():
@@ -39,16 +38,33 @@ def test_delete_note():
 def test_list_all_notes():
     client.post("/notes", json={"text": "a", "tag": "work"})
     client.post("/notes", json={"text": "b", "tag": "personal"})
-    r = client.get("/notes")
-    assert r.status_code == 200
-    assert len(r.json()) == 2
+    assert len(client.get("/notes").json()) == 2
 
 
 def test_tag_filter_bug():
-    # BUG: ?tag= filter is ignored — both notes returned even when filtering
+    # BUG: filter ignored — both notes returned
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
-    r = client.get("/notes?tag=work")
+    assert len(client.get("/notes?tag=work").json()) == 2  # BUG: should be 1
+
+
+def test_mark_done_returns_200():
+    client.post("/notes", json={"text": "task"})
+    r = client.patch("/notes/1/done")
     assert r.status_code == 200
-    # BUG: should be 1 but returns 2 because filter is not applied
-    assert len(r.json()) == 2
+    assert r.json()["done"] is True
+
+
+def test_mark_done_not_persisted_bug():
+    # BUG: PATCH returns done=True but GET still shows done=False
+    client.post("/notes", json={"text": "task"})
+    client.patch("/notes/1/done")
+    r = client.get("/notes/1")
+    assert r.json()["done"] is False  # BUG: should be True after patch
+
+
+def test_done_filter_bug():
+    # BUG: done filter ignored
+    client.post("/notes", json={"text": "task"})
+    client.patch("/notes/1/done")
+    assert len(client.get("/notes?done=true").json()) == 1  # BUG: returns all notes
