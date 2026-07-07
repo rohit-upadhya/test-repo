@@ -18,13 +18,12 @@ def test_summarise_returns_200():
 
 
 def test_summarise_empty_bullets_due_to_prompt_mismatch_bug():
-    # BUG: prompt outputs "### Header" format but parser expects "- bullet" lines.
-    # Result: bullets is always [] when the real model responds.
-    with patch("app.routes.summarise.call", return_value=MOCK_HEADER_RESPONSE):
+    # After fix: prompt now outputs "- bullet" format matching the parser.
+    with patch("app.routes.summarise.call", return_value=MOCK_BULLET_RESPONSE):
         response = client.post("/summarise", json={"text": "some long text"})
     assert response.status_code == 200
-    # BUG: empty because prompt format doesn't match parser
-    assert response.json()["bullets"] == []
+    bullets = response.json()["bullets"]
+    assert len(bullets) > 0
 
 
 def test_summarise_max_bullets_respected():
@@ -34,3 +33,24 @@ def test_summarise_max_bullets_respected():
     # This passes because the parser correctly slices — but only if prompt is fixed
     bullets = response.json()["bullets"]
     assert len(bullets) <= 3
+
+
+def test_summarise_bullets_non_empty():
+    with patch("app.routes.summarise.call", return_value=MOCK_BULLET_RESPONSE):
+        response = client.post("/summarise", json={"text": "some long text"})
+    assert response.status_code == 200
+    assert len(response.json()["bullets"]) > 0
+
+
+def test_summarise_max_bullets_honored():
+    five_bullets = "\n".join([
+        "- Point one",
+        "- Point two",
+        "- Point three",
+        "- Point four",
+        "- Point five",
+    ])
+    with patch("app.routes.summarise.call", return_value=five_bullets):
+        response = client.post("/summarise", json={"text": "some long text", "max_bullets": 2})
+    assert response.status_code == 200
+    assert len(response.json()["bullets"]) <= 2
