@@ -6,5 +6,6 @@
   "app_start_command": ".venv/bin/uvicorn app.main:app --port 8734",
   "app_port": 8734,
   "health_url": "http://127.0.0.1:8734/health",
-  "health_timeout": 30
+  "health_timeout": 30,
+  "coder_max_turns": 8
 }
