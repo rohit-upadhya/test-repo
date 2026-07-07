@@ -17,14 +17,11 @@ def test_summarise_returns_200():
     assert response.status_code == 200
 
 
-def test_summarise_empty_bullets_due_to_prompt_mismatch_bug():
-    # BUG: prompt outputs "### Header" format but parser expects "- bullet" lines.
-    # Result: bullets is always [] when the real model responds.
-    with patch("app.routes.summarise.call", return_value=MOCK_HEADER_RESPONSE):
+def test_summarise_bullets_non_empty():
+    with patch("app.routes.summarise.call", return_value=MOCK_BULLET_RESPONSE):
         response = client.post("/summarise", json={"text": "some long text"})
     assert response.status_code == 200
-    # BUG: empty because prompt format doesn't match parser
-    assert response.json()["bullets"] == []
+    assert response.json()["bullets"] != []
 
 
 def test_summarise_max_bullets_respected():
