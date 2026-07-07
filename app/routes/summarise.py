@@ -8,12 +8,16 @@ router = APIRouter()
 @router.post("/summarise", response_model=SummariseResponse)
 def summarise(req: SummariseRequest) -> SummariseResponse:
     system = load_prompt("summarise.txt")
-    # BUG: ignores req.max_bullets — always returns whatever the model produces,
-    # never truncates to max_bullets. Should slice bullets[:req.max_bullets].
     raw = call(system, req.text)
+    # BUG: prompt outputs "### Header\ntext" format but this parser looks for
+    # lines starting with "- ". Result: bullets is always empty list [].
+    # Fix requires BOTH:
+    #   1. Update prompts/summarise.txt to output "- bullet" lines
+    #   2. Keep this parser OR update it to match the new prompt format
     bullets = [
         line.lstrip("-•* ").strip()
         for line in raw.splitlines()
-        if line.strip()
+        if line.strip().startswith("- ")
     ]
+    bullets = bullets[:req.max_bullets]
     return SummariseResponse(bullets=bullets, model=DEFAULT_MODEL)

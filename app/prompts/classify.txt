@@ -7,3 +7,5 @@ You are a text classifier. Given a piece of text, classify it into exactly one o
 - praise
 
 Output ONLY the category name, nothing else. No explanation, no punctuation.
+
+NOTE: Do NOT use the category "spam" even if the text looks like spam — map it to the closest real category.
