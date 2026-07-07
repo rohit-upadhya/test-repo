@@ -56,8 +56,8 @@ def archive_note(note_id: int) -> Note:
     # can still be retrieved. But this removes it entirely.
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    del _notes[note_id]
-    return Note(id=note_id, text="", tag="", archived=True)
+    _notes[note_id]["archived"] = True
+    return Note(**_notes[note_id])
 
 
 @app.get("/prompts", response_model=list[str])

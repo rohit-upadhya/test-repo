@@ -60,14 +60,40 @@ def test_done_filter():
 
 
 def test_archive_note_returns_200():
-    # Tests current behavior: DELETE returns 200
     client.post("/notes", json={"text": "bye"})
     r = client.delete("/notes/1")
     assert r.status_code == 200
+    assert r.json()["archived"] is True
 
 
 def test_archived_note_not_in_list():
-    # After DELETE the note disappears from GET /notes (both hard and soft delete pass this)
     client.post("/notes", json={"text": "bye"})
     client.delete("/notes/1")
     assert len(client.get("/notes").json()) == 0
+
+
+def test_delete_returns_archived_true():
+    client.post("/notes", json={"text": "soft delete me", "tag": "work"})
+    r = client.delete("/notes/1")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["archived"] is True
+    assert body["text"] == "soft delete me"
+    assert body["tag"] == "work"
+
+
+def test_get_note_after_delete_returns_archived():
+    client.post("/notes", json={"text": "still here", "tag": "personal"})
+    client.delete("/notes/1")
+    r = client.get("/notes/1")
+    assert r.status_code == 200
+    assert r.json()["archived"] is True
+
+
+def test_archived_note_excluded_from_list():
+    client.post("/notes", json={"text": "note a", "tag": "work"})
+    client.post("/notes", json={"text": "note b", "tag": "work"})
+    client.delete("/notes/1")
+    notes = client.get("/notes").json()
+    assert len(notes) == 1
+    assert all(not n.get("archived", False) for n in notes)
