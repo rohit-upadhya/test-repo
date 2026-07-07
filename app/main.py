@@ -17,8 +17,7 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None) -> list[Note]:
-    # BUG: tag filter is ignored — always returns all notes
-    return list(_notes.values())
+    return [n for n in _notes.values() if tag is None or n.tag == tag]
 
 
 @app.post("/notes", status_code=201, response_model=Note)
