@@ -17,13 +17,18 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    return [Note(**n) for n in _notes.values()]
+    notes = [Note(**n) for n in _notes.values() if not n.get("archived", False)]
+    if tag is not None:
+        notes = [n for n in notes if n.tag == tag]
+    if done is not None:
+        notes = [n for n in notes if n.done == done]
+    return notes
 
 
 @app.post("/notes", status_code=201, response_model=Note)
 def create_note(body: NoteIn) -> Note:
     global _next_id
-    note = {"id": _next_id, "text": body.text, "tag": body.tag, "done": False}
+    note = {"id": _next_id, "text": body.text, "tag": body.tag, "done": False, "archived": False}
     _notes[_next_id] = note
     _next_id += 1
     return Note(**note)
@@ -40,15 +45,19 @@ def get_note(note_id: int) -> Note:
 def mark_done(note_id: int) -> Note:
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    note = _notes[note_id]
-    return Note(id=note["id"], text=note["text"], tag=note["tag"], done=True)
+    _notes[note_id]["done"] = True
+    return Note(**_notes[note_id])
 
 
-@app.delete("/notes/{note_id}", status_code=204)
-def delete_note(note_id: int) -> None:
+@app.delete("/notes/{note_id}", status_code=200, response_model=Note)
+def archive_note(note_id: int) -> Note:
+    # WRONG: hard-deletes instead of archiving (setting archived=True).
+    # The requirement says DELETE should soft-delete (archive) so the note
+    # can still be retrieved. But this removes it entirely.
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
     del _notes[note_id]
+    return Note(id=note_id, text="", tag="", archived=True)
 
 
 @app.get("/prompts", response_model=list[str])

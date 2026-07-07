@@ -11,6 +11,7 @@ class Note(BaseModel):
     text: str
     tag: str
     done: bool = False
+    archived: bool = False
 
 
 class PromptConfig(BaseModel):

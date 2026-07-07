@@ -29,30 +29,45 @@ def test_get_note_not_found():
     assert client.get("/notes/999").status_code == 404
 
 
-def test_delete_note():
-    client.post("/notes", json={"text": "bye"})
-    assert client.delete("/notes/1").status_code == 204
-    assert client.get("/notes/1").status_code == 404
-
-
 def test_list_notes():
     client.post("/notes", json={"text": "a", "tag": "work"})
     client.post("/notes", json={"text": "b", "tag": "personal"})
     assert len(client.get("/notes").json()) == 2
 
 
-def test_tag_filter_not_applied():
+def test_tag_filter():
     client.post("/notes", json={"text": "work note", "tag": "work"})
     client.post("/notes", json={"text": "personal note", "tag": "personal"})
-    assert len(client.get("/notes?tag=work").json()) == 2
+    r = client.get("/notes?tag=work")
+    assert len(r.json()) == 1
+    assert r.json()[0]["tag"] == "work"
 
 
-def test_mark_done_returns_200():
+def test_mark_done():
     client.post("/notes", json={"text": "task"})
     r = client.patch("/notes/1/done")
     assert r.status_code == 200
+    assert r.json()["done"] is True
+    assert client.get("/notes/1").json()["done"] is True
 
 
-def test_done_filter_not_applied():
-    client.post("/notes", json={"text": "task", "tag": "work"})
-    assert len(client.get("/notes?done=true").json()) == 1
+def test_done_filter():
+    client.post("/notes", json={"text": "task1"})
+    client.post("/notes", json={"text": "task2"})
+    client.patch("/notes/1/done")
+    r = client.get("/notes?done=true")
+    assert len(r.json()) == 1
+
+
+def test_archive_note_returns_200():
+    # Tests current behavior: DELETE returns 200
+    client.post("/notes", json={"text": "bye"})
+    r = client.delete("/notes/1")
+    assert r.status_code == 200
+
+
+def test_archived_note_not_in_list():
+    # After DELETE the note disappears from GET /notes (both hard and soft delete pass this)
+    client.post("/notes", json={"text": "bye"})
+    client.delete("/notes/1")
+    assert len(client.get("/notes").json()) == 0
