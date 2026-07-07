@@ -71,3 +71,32 @@ def test_archived_note_not_in_list():
     client.post("/notes", json={"text": "bye"})
     client.delete("/notes/1")
     assert len(client.get("/notes").json()) == 0
+
+
+def test_delete_returns_archived_true():
+    client.post("/notes", json={"text": "archive me", "tag": "work"})
+    r = client.delete("/notes/1")
+    assert r.status_code == 200
+    assert r.json()["archived"] is True
+
+
+def test_get_after_delete_returns_archived():
+    client.post("/notes", json={"text": "archive me", "tag": "work"})
+    client.delete("/notes/1")
+    r = client.get("/notes/1")
+    assert r.status_code == 200
+    assert r.json()["archived"] is True
+
+
+def test_list_excludes_archived():
+    client.post("/notes", json={"text": "first", "tag": "work"})
+    client.post("/notes", json={"text": "second", "tag": "work"})
+    client.delete("/notes/1")
+    notes = client.get("/notes").json()
+    assert len(notes) == 1
+    assert notes[0]["id"] != 1
+
+
+def test_get_note_never_created_returns_404():
+    r = client.get("/notes/999")
+    assert r.status_code == 404
