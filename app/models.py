@@ -1,33 +1,17 @@
 from pydantic import BaseModel
 
 
-class SummariseRequest(BaseModel):
+class NoteIn(BaseModel):
     text: str
-    max_bullets: int = 5
+    tag: str = "general"
 
 
-class SummariseResponse(BaseModel):
-    bullets: list[str]
-    model: str
-
-
-class ClassifyRequest(BaseModel):
-    text: str
-
-
-class ClassifyResponse(BaseModel):
-    category: str
-    model: str
-
-
-class HistoryEntry(BaseModel):
+class Note(BaseModel):
     id: int
-    operation: str   # "summarise" | "classify"
-    input_text: str
-    result: str
-    model: str
+    text: str
+    tag: str
 
 
-VALID_CATEGORIES = {
-    "bug_report", "feature_request", "question", "complaint", "praise"
-}
+class PromptConfig(BaseModel):
+    name: str
+    content: str
