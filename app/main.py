@@ -17,7 +17,12 @@ def health():
 
 @app.get("/notes", response_model=list[Note])
 def list_notes(tag: str | None = None, done: bool | None = None) -> list[Note]:
-    return [Note(**n) for n in _notes.values()]
+    notes = _notes.values()
+    if tag is not None:
+        notes = [n for n in notes if n["tag"] == tag]
+    if done is not None:
+        notes = [n for n in notes if n["done"] == done]
+    return [Note(**n) for n in notes]
 
 
 @app.post("/notes", status_code=201, response_model=Note)
@@ -40,6 +45,7 @@ def get_note(note_id: int) -> Note:
 def mark_done(note_id: int) -> Note:
     if note_id not in _notes:
         raise HTTPException(status_code=404, detail="Note not found")
+    _notes[note_id]["done"] = True
     note = _notes[note_id]
     return Note(id=note["id"], text=note["text"], tag=note["tag"], done=True)
 
